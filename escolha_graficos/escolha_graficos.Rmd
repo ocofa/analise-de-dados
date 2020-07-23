@@ -17,12 +17,6 @@ library(highcharter)
 
 path_file <- "https://bi.static.es.gov.br/covid19/MICRODADOS.csv"
 
-pop_branca <- 1481678 
-pop_negra <-  293334+1708796
-
-dados_populacao <- data.frame(raca_cor = c('Brancas', 'Negras'), 
-                              pop = c(pop_branca, pop_negra))
-
 # Lendo dados
 dados_totais <- 
   read.csv(path_file, sep = ";", fileEncoding = "ISO-8859-1")
@@ -30,10 +24,9 @@ dados_totais <-
 # Limpando os nomes das variaveis
 dados_totais <- janitor::clean_names(dados_totais)
 
-# Mudando nome da variável data, pois data também é uma função do R 
-# e isso pode causar problemas
+# Mudando tipo da variável data_notificacao para date
 dados_totais <- dados_totais %>% 
-  mutate(datas_info = as.Date(dados_totais$data)) 
+  mutate(data_notificacao = as.Date(dados_totais$data_notificacao)) 
 
 ## Criando categoria Cor/Raça negra
 dados_totais$raca_cor <- forcats::fct_recode(dados_totais$raca_cor, 
@@ -106,22 +99,22 @@ letalidade <- inner_join(casos, mortes) %>%
 
 ```{r}
 casos_t <- dados %>%
-  group_by(raca_cor, datas_info) %>%
+  group_by(raca_cor, data_notificacao) %>%
   summarise(n_casos = n()) %>%
   tidyr::complete(tidyr::nesting(raca_cor), 
-                  datas_info = seq.Date(min(dados$datas_info),
-                                        max(dados$datas_info), 
+                  data_notificacao = seq.Date(min(dados$data_notificacao),
+                                        max(dados$data_notificacao), 
                                         by = "day"), 
                   fill = list(n_casos = 0)) %>%
   mutate(casos_acumulados = cumsum(n_casos))
 
 mortes_t <- dados %>% 
   filter(evolucao ==  "Óbito pelo COVID-19") %>%
-  group_by(raca_cor, datas_info) %>%
+  group_by(raca_cor, data_notificacao) %>%
   summarise(n_mortes = n()) %>%
   tidyr::complete(tidyr::nesting(raca_cor), 
-                  datas_info = seq.Date(min(dados$datas_info),
-                                        max(dados$datas_info),
+                  data_notificacao = seq.Date(min(dados$data_notificacao),
+                                        max(dados$data_notificacao),
                                         by = "day"), 
                   fill = list(n_mortes = 0)) %>%
   mutate(mortes_acumuladas = cumsum(n_mortes))
@@ -137,22 +130,22 @@ letalidade_t <- inner_join(casos_t, mortes_t) %>%
 
 ```{r}
 casos_f_t <- dados_mais_favelas %>%
-  group_by(favela, datas_info) %>%
+  group_by(favela, data_notificacao) %>%
   summarise(n_casos = n()) %>%
   tidyr::complete(tidyr::nesting(favela), 
-                  datas_info = seq.Date(min(dados_mais_favelas$datas_info),
-                                        max(dados_mais_favelas$datas_info), 
+                  data_notificacao = seq.Date(min(dados_mais_favelas$data_notificacao),
+                                        max(dados_mais_favelas$data_notificacao), 
                                         by = "day"), 
                   fill = list(n_casos = 0)) %>%
   mutate(casos_acumulados = cumsum(n_casos))
 
 mortes_f_t <- dados_mais_favelas %>% 
   filter(evolucao ==  "Óbito pelo COVID-19") %>%
-  group_by(favela, datas_info) %>%
+  group_by(favela, data_notificacao) %>%
   summarise(n_mortes = n()) %>%
   tidyr::complete(tidyr::nesting(favela), 
-                  datas_info = seq.Date(min(dados_mais_favelas$datas_info),
-                                        max(dados_mais_favelas$datas_info),
+                  data_notificacao = seq.Date(min(dados_mais_favelas$data_notificacao),
+                                        max(dados_mais_favelas$data_notificacao),
                                         by = "day"), 
                   fill = list(n_mortes = 0)) %>%
   mutate(mortes_acumuladas = cumsum(n_mortes))
@@ -200,8 +193,9 @@ grafico %>%
 ## Gráfico 3 (mudando tema do gráfico 1)
 
 ```{r}
-grafico %>%
+grafico_letalidade_es<-grafico %>%
   hc_add_theme(hc_theme_chalk())
+grafico_letalidade_es
 ```
 
 
@@ -273,7 +267,7 @@ grafico_favela %>%
 
 ```{r}
 grafico_tempo <- hchart(letalidade_t, type = "line", 
-       hcaes(x = datas_info, y = letalidade, group = raca_cor)) %>%
+       hcaes(x = data_notificacao, y = letalidade, group = raca_cor)) %>%
   hc_colors(c("#440154FF", "#FDE725FF")) %>%
   hc_title(text = "Taxa de letalidade da COVID-19 no ES") %>%
   hc_xAxis(title = list(text = "")) %>%
@@ -288,8 +282,8 @@ grafico_tempo
 ## Gráfico 12
 
 ```{r}
-datas_informacao <- seq.Date(min(dados$datas_info),
-                                        max(dados$datas_info), 
+data_notificacaormacao <- seq.Date(min(dados$data_notificacao),
+                                        max(dados$data_notificacao), 
                                         by = "day")
 
 retorna_serie <- function(dados = letalidade_t, negros = TRUE, 
@@ -307,7 +301,7 @@ retorna_serie <- function(dados = letalidade_t, negros = TRUE,
            select(variavel) %>% unlist() %>% as.numeric(), 
          ncol = 1) 
   }
-  xts::xts(x = serie, order.by = datas_informacao)
+  xts::xts(x = serie, order.by = data_notificacaormacao)
 }
 
 letalidade_n <- retorna_serie()
@@ -418,9 +412,9 @@ highchart(type = "stock") %>%
 ## Gráfico 18
 
 ```{r}
-datas_informacao_fav <- 
-  seq.Date(min(dados_mais_favelas$datas_info),
-           max(dados_mais_favelas$datas_info),
+data_notificacaormacao_fav <- 
+  seq.Date(min(dados_mais_favelas$data_notificacao),
+           max(dados_mais_favelas$data_notificacao),
            by = "day")
 
 retorna_serie_fav <- function(dados = letalidade_f_t, favela = TRUE, 
@@ -438,7 +432,7 @@ retorna_serie_fav <- function(dados = letalidade_f_t, favela = TRUE,
            select(variavel) %>% unlist() %>% as.numeric(), 
          ncol = 1) 
   }
-  xts::xts(x = serie, order.by = datas_informacao_fav)
+  xts::xts(x = serie, order.by = data_notificacaormacao_fav)
 }
 
 letal_fav <- retorna_serie_fav()
